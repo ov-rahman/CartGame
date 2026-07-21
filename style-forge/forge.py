@@ -489,6 +489,17 @@ def cmd_build(cfg, cat, args):
     print("Готово.")
 
 
+def shop_card(card, cfg):
+    """Обычная карта + ценник снизу (магазинный вид). Возвращает (image, tag)."""
+    card_img, tag = render_card(card, cfg)
+    W, H = card_img.size
+    gap, plate_h = 20, 88
+    canvas = Image.new("RGBA", (W, H + gap + plate_h + 6), (0, 0, 0, 0))
+    canvas.paste(card_img, (0, 0), card_img)
+    draw_price_plate(canvas, W // 2, H + gap, card["price"], cfg)
+    return canvas, tag
+
+
 def cmd_shop(cfg, cat, args):
     """Магазинный вариант карты: обычная карта + ценник снизу, отдельной картинкой."""
     outdir = os.path.join(HERE, "output", "shop")
@@ -497,13 +508,8 @@ def cmd_shop(cfg, cat, args):
     if not priced:
         print("В catalog.json нет карт с полем 'price'.")
         return
-    gap, plate_h = 20, 88
     for card in priced:
-        card_img, tag = render_card(card, cfg)
-        W, H = card_img.size
-        canvas = Image.new("RGBA", (W, H + gap + plate_h + 6), (0, 0, 0, 0))
-        canvas.paste(card_img, (0, 0), card_img)
-        draw_price_plate(canvas, W // 2, H + gap, card["price"], cfg)
+        canvas, tag = shop_card(card, cfg)
         canvas.save(os.path.join(outdir, f"{card['id']}.png"))
         print(f"  ✓ {card['name']:<14} [{tag}] + ценник {card['price']}◎ → output/shop/{card['id']}.png")
     print("Готово.")

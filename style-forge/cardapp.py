@@ -157,6 +157,16 @@ class EditorView(ui.View):
         self.cost_btn.action = self.choose_cost
         self.scroll.add_subview(self.cost_btn)
 
+        self.price = card.get("price")
+        self.price_btn = ui.Button()
+        self.price_btn.title = self._price_title()
+        self.price_btn.font = ("HelveticaNeue-Bold", 17)
+        self.price_btn.background_color = TH["field_bg"]
+        self.price_btn.tint_color = TH["text"]
+        self.price_btn.corner_radius = 12
+        self.price_btn.action = self.choose_price
+        self.scroll.add_subview(self.price_btn)
+
         self.type_seg = ui.SegmentedControl()
         self.type_seg.segments = TYPE_LABELS
         self.type_seg.selected_index = TYPES.index(card.get("type", "attack")) if card.get("type", "attack") in TYPES else 0
@@ -164,7 +174,7 @@ class EditorView(ui.View):
         self.scroll.add_subview(self.type_seg)
 
         self.labels = []
-        for t in ("Название", "Описание", "Стоимость", "Тип"):
+        for t in ("Название", "Описание", "Стоимость", "Тип", "Цена (в магазине)"):
             lb = ui.Label()
             lb.text = t.upper()
             lb.font = ("HelveticaNeue-Bold", 12)
@@ -231,6 +241,7 @@ class EditorView(ui.View):
             (self.labels[1], self.desc_view, 110),
             (self.labels[2], self.cost_btn, 50),
             (self.labels[3], self.type_seg, 40),
+            (self.labels[4], self.price_btn, 50),
         ]
         for lb, field, h in rows:
             lb.frame = (m, y, w, 16)
@@ -246,12 +257,36 @@ class EditorView(ui.View):
             y += 64
         self.scroll.content_size = (self.width, y)
 
+    def _price_title(self):
+        return "Цена:  %d ◎" % self.price if self.price is not None else "Цена:  нет"
+
+    def choose_price(self, sender):
+        cur = str(self.price) if self.price is not None else ""
+        try:
+            v = dialogs.input_alert("Цена в магазине", "Число монет (пусто = без цены)", cur, "OK")
+        except KeyboardInterrupt:
+            return
+        v = (v or "").strip()
+        if v == "":
+            self.price = None
+        else:
+            try:
+                self.price = max(0, int(v))
+            except ValueError:
+                console.hud_alert("Нужно число", "error", 1.5)
+                return
+        self.price_btn.title = self._price_title()
+
     def current_card(self):
         c = dict(self.card)
         c["name"] = self.name_field.text.strip() or "Без названия"
         c["text"] = self.desc_view.text.strip()
         c["cost"] = self.cost
         c["type"] = TYPES[self.type_seg.selected_index]
+        if self.price is not None:
+            c["price"] = self.price
+        else:
+            c.pop("price", None)
         if not c.get("art"):
             c["art"] = c["name"]
         return c
@@ -260,7 +295,10 @@ class EditorView(ui.View):
         c = self.current_card()
         console.show_activity("Собираю…")
         try:
-            img, _ = forge.render_card(c, cfg)
+            if c.get("price") is not None:
+                img, _ = forge.shop_card(c, cfg)      # с ценником
+            else:
+                img, _ = forge.render_card(c, cfg)
             os.makedirs(os.path.join(HERE, "output"), exist_ok=True)
             path = os.path.join(HERE, "output", c["id"] + "__preview.png")
             img.save(path)
@@ -323,6 +361,10 @@ class EditorView(ui.View):
         self.card["text"] = self.desc_view.text.strip()
         self.card["cost"] = self.cost
         self.card["type"] = TYPES[self.type_seg.selected_index]
+        if self.price is not None:
+            self.card["price"] = self.price
+        else:
+            self.card.pop("price", None)
         if not self.card.get("art"):
             self.card["art"] = self.card["name"]
         ids = [c["id"] for c in DATA["cards"]]
