@@ -1,17 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-Card Forge — простой интерфейс для сборки карт на iPhone (Pythonista).
+Card Forge — редактор карт с интерфейсом для iPhone (Pythonista).
 
-Открой этот файл в Pythonista и нажми ▶️ Run. Появятся большие кнопки:
-  • Собрать все карты      — пересобирает всё в output/
-  • Собрать магазин        — варианты с ценником в output/shop/
-  • Показать карту         — выбрать карту и посмотреть её
-  • Добавить иконку        — выбрать карту и подложить картинку из Фото
-
-Никаких команд вводить не нужно — только тапы.
+Открой в Pythonista и нажми ▶️ Run.
+  • Список карт со светлой/тёмной темой (кнопка «Тема»).
+  • Карты с иконкой помечены 🔒 и защищены от случайного удаления.
+    Карты без иконки можно удалить свайпом влево.
+  • «＋» — новая карта.
+  • Тап по карте → окно-редактор: название, описание, стоимость (0–10),
+    иконка (тап → галерея), и «Сохранить».
 """
 import os
 import sys
+import json
+import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 os.chdir(HERE)
@@ -29,60 +31,81 @@ except ImportError:
     photos = None
 
 cfg = forge.load_json("style.config.json")
+CATALOG = os.path.join(HERE, "catalog.json")
+THEME_FILE = os.path.join(HERE, "theme.json")
+
+TYPES = ["attack", "skill", "power", "item"]
+TYPE_LABELS = ["Атака", "Навык", "Сила", "Предмет"]
+
+PALETTES = {
+    "dark": {
+        "bg": "#111114", "panel": "#1b1b1f", "text": "#ece5d6", "sub": "#9a9285",
+        "accent": "#d9a741", "field_bg": "#26262b", "field_text": "#f2ead9", "border": "#33333a",
+    },
+    "light": {
+        "bg": "#efe7d6", "panel": "#fbf6ea", "text": "#2e2218", "sub": "#8a745a",
+        "accent": "#b06d2e", "field_bg": "#ffffff", "field_text": "#2e2218", "border": "#d8c8a8",
+    },
+}
 
 
-def cards():
-    return forge.load_json("catalog.json")["cards"]
-
-
-class Args:
-    def __init__(self, card=None):
-        self.card = card
-
-
-# ─────────────────────────────────────────── действия кнопок
-
-def build_all(sender):
-    console.show_activity("Собираю карты…")
+def load_theme_name():
     try:
-        forge.cmd_build(cfg, forge.load_json("catalog.json"), Args())
-        console.hud_alert("Готово! Карты в output/", "success", 1.3)
-    except Exception as e:
-        console.hud_alert("Ошибка: %s" % e, "error", 2.5)
-    finally:
-        console.hide_activity()
+        with open(THEME_FILE, encoding="utf-8") as f:
+            return json.load(f).get("theme", "dark")
+    except Exception:
+        return "dark"
 
 
-def build_shop(sender):
-    console.show_activity("Собираю магазин…")
+def save_theme_name(name):
     try:
-        forge.cmd_shop(cfg, forge.load_json("catalog.json"), Args())
-        console.hud_alert("Готово! Магазин в output/shop/", "success", 1.3)
-    except Exception as e:
-        console.hud_alert("Ошибка: %s" % e, "error", 2.5)
-    finally:
-        console.hide_activity()
+        with open(THEME_FILE, "w", encoding="utf-8") as f:
+            json.dump({"theme": name}, f)
+    except Exception:
+        pass
 
 
-def show_card(sender):
-    cs = cards()
-    names = [c["name"] for c in cs]
-    choice = dialogs.list_dialog("Какую карту показать?", names)
-    if not choice:
-        return
-    card = cs[names.index(choice)]
-    console.show_activity("Собираю…")
+THEME_NAME = load_theme_name()
+TH = PALETTES[THEME_NAME]
+
+
+# ─────────────────────────────────────────── данные
+
+def load_data():
+    with open(CATALOG, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def save_data(data):
+    with open(CATALOG, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+
+DATA = load_data()
+
+
+def has_icon(card):
+    return os.path.exists(os.path.join(HERE, "inbox", card["id"] + ".png"))
+
+
+def new_id():
+    return "card_%d" % int(time.time() * 1000 % 1000000000)
+
+
+def ui_image(path):
     try:
-        img, _ = forge.render_card(card, cfg)
-        os.makedirs(os.path.join(HERE, "output"), exist_ok=True)
-        path = os.path.join(HERE, "output", card["id"] + ".png")
-        img.save(path)
-    except Exception as e:
-        console.hide_activity()
-        console.hud_alert("Ошибка: %s" % e, "error", 2.5)
-        return
-    console.hide_activity()
-    console.quicklook(path)
+        with open(path, "rb") as f:
+            return ui.Image.from_data(f.read())
+    except Exception:
+        return None
+
+
+def row_thumb(card):
+    for p in (os.path.join(HERE, "inbox", card["id"] + ".png"),
+              os.path.join(HERE, "output", card["id"] + ".png")):
+        if os.path.exists(p):
+            return ui_image(p)
+    return None
 
 
 def pick_image():
@@ -91,9 +114,7 @@ def pick_image():
         return None
     try:
         asset = photos.pick_asset()
-        if asset is None:
-            return None
-        return asset.get_image()
+        return asset.get_image() if asset else None
     except AttributeError:
         try:
             return photos.pick_image()
@@ -102,79 +123,266 @@ def pick_image():
             return None
 
 
-def add_icon(sender):
-    cs = cards()
-    names = [c["name"] for c in cs]
-    choice = dialogs.list_dialog("Иконку для какой карты?", names)
-    if not choice:
-        return
-    card = cs[names.index(choice)]
-    img = pick_image()
-    if img is None:
-        return
-    os.makedirs(os.path.join(HERE, "inbox"), exist_ok=True)
-    dest = os.path.join(HERE, "inbox", card["id"] + ".png")
-    img.save(dest)
-    # проверяем прозрачность: Фото часто сохраняют без альфы
-    alpha_min = img.convert("RGBA").getextrema()[3][0]
-    if alpha_min == 255:
-        console.hud_alert("Сохранено, но БЕЗ прозрачного фона!", "error", 2.5)
-    else:
-        console.hud_alert("Иконка «%s» сохранена" % card["name"], "success", 1.5)
+def rebuild_card_image(card):
+    try:
+        img, _ = forge.render_card(card, cfg)
+        os.makedirs(os.path.join(HERE, "output"), exist_ok=True)
+        img.save(os.path.join(HERE, "output", card["id"] + ".png"))
+    except Exception:
+        pass
 
 
-# ─────────────────────────────────────────── интерфейс
+# ─────────────────────────────────────────── редактор карты
 
-BUTTONS = [
-    ("🔨  Собрать все карты", build_all, "#7a5230"),
-    ("🏷  Собрать магазин", build_shop, "#5e7c6e"),
-    ("👁  Показать карту", show_card, "#3e5c6e"),
-    ("🖼  Добавить иконку", add_icon, "#6e4a7a"),
-]
+class EditorView(ui.View):
+    def __init__(self, card, is_new, on_saved, nav):
+        super().__init__()
+        self.card = card
+        self.is_new = is_new
+        self.on_saved = on_saved
+        self.nav = nav
+        self.cost = int(card.get("cost", 1))
+        self.name = card.get("name", "") or "Новая карта"
+        self.background_color = TH["bg"]
+        self.right_button_items = [ui.ButtonItem(title="Сохранить", action=self.save)]
 
+        self.scroll = ui.ScrollView()
+        self.scroll.background_color = TH["bg"]
+        self.add_subview(self.scroll)
 
-class ForgeApp(ui.View):
-    def __init__(self, *a, **k):
-        super().__init__(*a, **k)
-        self.name = "Card Forge"
-        self.background_color = "#efe7d6"
+        # иконка
+        self.icon_btn = ui.Button()
+        self.icon_btn.corner_radius = 16
+        self.icon_btn.background_color = TH["field_bg"]
+        self.icon_btn.border_width = 1
+        self.icon_btn.border_color = TH["border"]
+        self.icon_btn.tint_color = TH["sub"]
+        self.icon_btn.title = "Нажми, чтобы выбрать иконку"
+        self.icon_btn.action = self.choose_icon
+        ic = os.path.join(HERE, "inbox", card["id"] + ".png")
+        if os.path.exists(ic):
+            self.icon_btn.background_image = ui_image(ic)
+            self.icon_btn.title = ""
+        self.scroll.add_subview(self.icon_btn)
 
-        self.title = ui.Label()
-        self.title.text = "Card Forge"
-        self.title.font = ("HelveticaNeue-Bold", 30)
-        self.title.text_color = "#2e2218"
-        self.title.alignment = ui.ALIGN_CENTER
-        self.add_subview(self.title)
+        self.name_field = self._field(card.get("name", ""), "Название")
+        self.desc_view = ui.TextView()
+        self.desc_view.text = card.get("text", "")
+        self.desc_view.font = ("HelveticaNeue", 17)
+        self.desc_view.background_color = TH["field_bg"]
+        self.desc_view.text_color = TH["field_text"]
+        self.desc_view.corner_radius = 12
+        self.scroll.add_subview(self.desc_view)
 
-        self.hint = ui.Label()
-        self.hint.text = "Собери карты одним касанием"
-        self.hint.font = ("HelveticaNeue", 15)
-        self.hint.text_color = "#7a5230"
-        self.hint.alignment = ui.ALIGN_CENTER
-        self.add_subview(self.hint)
+        self.cost_btn = ui.Button()
+        self.cost_btn.title = "Стоимость:  %d" % self.cost
+        self.cost_btn.font = ("HelveticaNeue-Bold", 17)
+        self.cost_btn.background_color = TH["field_bg"]
+        self.cost_btn.tint_color = TH["text"]
+        self.cost_btn.corner_radius = 12
+        self.cost_btn.action = self.choose_cost
+        self.scroll.add_subview(self.cost_btn)
 
-        self.buttons = []
-        for title, action, color in BUTTONS:
-            b = ui.Button(title=title)
-            b.background_color = color
-            b.tint_color = "white"
-            b.font = ("HelveticaNeue-Bold", 19)
-            b.corner_radius = 14
-            b.action = action
-            self.add_subview(b)
-            self.buttons.append(b)
+        self.type_seg = ui.SegmentedControl()
+        self.type_seg.segments = TYPE_LABELS
+        self.type_seg.selected_index = TYPES.index(card.get("type", "attack")) if card.get("type", "attack") in TYPES else 0
+        self.type_seg.tint_color = TH["accent"]
+        self.scroll.add_subview(self.type_seg)
+
+        self.labels = []
+        for t in ("Название", "Описание", "Стоимость", "Тип"):
+            lb = ui.Label()
+            lb.text = t.upper()
+            lb.font = ("HelveticaNeue-Bold", 12)
+            lb.text_color = TH["sub"]
+            self.scroll.add_subview(lb)
+            self.labels.append(lb)
+
+        self.save_btn = ui.Button()
+        self.save_btn.title = "Сохранить карту"
+        self.save_btn.font = ("HelveticaNeue-Bold", 19)
+        self.save_btn.background_color = TH["accent"]
+        self.save_btn.tint_color = "#ffffff"
+        self.save_btn.corner_radius = 14
+        self.save_btn.action = self.save
+        self.scroll.add_subview(self.save_btn)
+
+    def _field(self, value, placeholder):
+        f = ui.TextField()
+        f.text = value
+        f.placeholder = placeholder
+        f.font = ("HelveticaNeue", 18)
+        f.background_color = TH["field_bg"]
+        f.text_color = TH["field_text"]
+        f.bordered = False
+        f.corner_radius = 12
+        f.clip_to_bounds = True
+        self.scroll.add_subview(f)
+        return f
 
     def layout(self):
-        m = 22
+        m = 18
         w = self.width - 2 * m
-        self.title.frame = (m, 60, w, 40)
-        self.hint.frame = (m, 102, w, 24)
-        h, gap = 66, 18
-        total = len(self.buttons) * (h + gap) - gap
-        y0 = max(150, (self.height - total) / 2)
-        for i, b in enumerate(self.buttons):
-            b.frame = (m, y0 + i * (h + gap), w, h)
+        self.scroll.frame = self.bounds
+        y = 16
+        side = min(w, 200)
+        self.icon_btn.frame = ((self.width - side) / 2, y, side, side)
+        y += side + 22
+        rows = [
+            (self.labels[0], self.name_field, 48),
+            (self.labels[1], self.desc_view, 110),
+            (self.labels[2], self.cost_btn, 50),
+            (self.labels[3], self.type_seg, 40),
+        ]
+        for lb, field, h in rows:
+            lb.frame = (m, y, w, 16)
+            y += 20
+            field.frame = (m, y, w, h)
+            y += h + 16
+        self.save_btn.frame = (m, y + 6, w, 56)
+        y += 78
+        self.scroll.content_size = (self.width, y)
+
+    def choose_cost(self, sender):
+        v = dialogs.list_dialog("Стоимость", [str(i) for i in range(0, 11)])
+        if v is not None:
+            self.cost = int(v)
+            self.cost_btn.title = "Стоимость:  %d" % self.cost
+
+    def choose_icon(self, sender):
+        img = pick_image()
+        if img is None:
+            return
+        os.makedirs(os.path.join(HERE, "inbox"), exist_ok=True)
+        dest = os.path.join(HERE, "inbox", self.card["id"] + ".png")
+        try:
+            img.save(dest)
+        except Exception as e:
+            console.hud_alert("Не сохранилось: %s" % e, "error", 2.5)
+            return
+        self.icon_btn.background_image = ui_image(dest)
+        self.icon_btn.title = ""
+        if img.convert("RGBA").getextrema()[3][0] == 255:
+            console.hud_alert("Иконка БЕЗ прозрачного фона!", "error", 2.5)
+        else:
+            console.hud_alert("Иконка добавлена", "success", 1.2)
+
+    def save(self, sender):
+        self.card["name"] = self.name_field.text.strip() or "Без названия"
+        self.card["text"] = self.desc_view.text.strip()
+        self.card["cost"] = self.cost
+        self.card["type"] = TYPES[self.type_seg.selected_index]
+        if not self.card.get("art"):
+            self.card["art"] = self.card["name"]
+        ids = [c["id"] for c in DATA["cards"]]
+        if self.card["id"] in ids:
+            DATA["cards"][ids.index(self.card["id"])] = self.card
+        else:
+            DATA["cards"].append(self.card)
+        save_data(DATA)
+        rebuild_card_image(self.card)
+        console.hud_alert("Сохранено", "success", 1.0)
+        self.on_saved()
+        self.nav.pop_view()
+
+
+# ─────────────────────────────────────────── список карт
+
+class ListView(ui.View):
+    def __init__(self):
+        super().__init__()
+        self.name = "Карты"
+        self.nav = None
+        self.tv = ui.TableView()
+        self.tv.data_source = self
+        self.tv.delegate = self
+        self.tv.row_height = 64
+        self.add_subview(self.tv)
+        self.right_button_items = [
+            ui.ButtonItem(title="＋", action=self.new_card),
+            ui.ButtonItem(title="Тема", action=self.toggle_theme),
+        ]
+        self.left_button_items = [ui.ButtonItem(title="Закрыть", action=lambda s: self.nav.close())]
+        self.apply_theme()
+
+    def layout(self):
+        self.tv.frame = self.bounds
+
+    def apply_theme(self):
+        self.background_color = TH["bg"]
+        self.tv.background_color = TH["bg"]
+        self.tv.separator_color = TH["border"]
+        if self.nav:
+            self.nav.background_color = TH["bg"]
+            self.nav.tint_color = TH["accent"]
+        self.tv.reload()
+
+    def toggle_theme(self, sender):
+        global THEME_NAME, TH
+        THEME_NAME = "light" if THEME_NAME == "dark" else "dark"
+        TH = PALETTES[THEME_NAME]
+        save_theme_name(THEME_NAME)
+        self.apply_theme()
+
+    def new_card(self, sender):
+        card = {"id": new_id(), "name": "", "type": "attack", "cost": 1, "text": "", "art": ""}
+        self.open_editor(card, True)
+
+    def open_editor(self, card, is_new):
+        ed = EditorView(card, is_new, self.reload_list, self.nav)
+        ed.name = "Новая карта" if is_new else "Карта"
+        self.nav.push_view(ed)
+
+    def reload_list(self):
+        self.tv.reload()
+
+    # data source / delegate
+    def tableview_number_of_rows(self, tv, section):
+        return len(DATA["cards"])
+
+    def tableview_cell_for_row(self, tv, section, row):
+        card = DATA["cards"][row]
+        cell = ui.TableViewCell()
+        lock = "🔒 " if has_icon(card) else ""
+        cell.text_label.text = "%s%s   ·   %d⚡" % (lock, card.get("name") or "Без названия", card.get("cost", 0))
+        cell.text_label.text_color = TH["text"]
+        cell.background_color = TH["panel"]
+        cell.selected_background_view = ui.View()
+        cell.selected_background_view.background_color = TH["field_bg"]
+        cell.accessory_type = "disclosure_indicator"
+        img = row_thumb(card)
+        if img:
+            cell.image_view.image = img
+        return cell
+
+    def tableview_did_select(self, tv, section, row):
+        tv.selected_row = -1
+        self.open_editor(DATA["cards"][row], False)
+
+    def tableview_can_delete(self, tv, section, row):
+        return not has_icon(DATA["cards"][row])  # карты с иконкой не удаляются
+
+    def tableview_delete(self, tv, section, row):
+        card = DATA["cards"][row]
+        del DATA["cards"][row]
+        save_data(DATA)
+        for p in (os.path.join(HERE, "output", card["id"] + ".png"),
+                  os.path.join(HERE, "output", "shop", card["id"] + ".png")):
+            try:
+                os.remove(p)
+            except OSError:
+                pass
+        tv.reload()
+
+
+def main():
+    lst = ListView()
+    nav = ui.NavigationView(lst)
+    lst.nav = nav
+    lst.apply_theme()
+    nav.name = "Card Forge"
+    nav.present("fullscreen")
 
 
 if __name__ == "__main__":
-    ForgeApp().present("fullscreen")
+    main()

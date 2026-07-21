@@ -1,5 +1,5 @@
 {
-  "_comment": "Каталог ассетов. Один объект = одна карта. Поле art — это ТОЛЬКО описание субъекта (что нарисовать), стиль добавит инструмент.",
+  "_comment": "Каталог карт. Управляется приложением cardapp.py (можно и руками). art — описание субъекта для генерации иконки.",
   "cards": [
     {
       "id": "gold_arrow",
@@ -11,72 +11,12 @@
       "price": 55
     },
     {
-      "id": "prick",
-      "name": "Укол",
-      "type": "attack",
-      "cost": 1,
-      "text": "Наносит 6 урона.",
-      "art": "a slender fencing rapier lunging forward with a bright glint on the tip, a few small speed lines"
-    },
-    {
-      "id": "block",
-      "name": "Защита",
-      "type": "skill",
-      "cost": 2,
-      "text": "Даёт 5 брони.",
-      "art": "a sturdy round wooden buckler shield with a riveted iron rim, heroic and slightly worn"
-    },
-    {
       "id": "firework",
       "name": "Фейерверк",
       "type": "attack",
       "cost": 3,
       "text": "Наносит 8 урона 3 случайным врагам.",
       "art": "a lit carnival skyrocket bursting into a big star-shaped explosion with flying sparks"
-    },
-    {
-      "id": "dash",
-      "name": "Рывок",
-      "type": "skill",
-      "cost": 4,
-      "text": "Даёт 7 уклонения.",
-      "art": "a caped black cat hero dashing at high speed in a blur of motion, trailing bold speed lines"
-    },
-    {
-      "id": "theft",
-      "name": "Кража",
-      "type": "attack",
-      "cost": 3,
-      "text": "Крадёт 6 здоровья у врага.",
-      "art": "a sneaky white-gloved cartoon hand snatching a glowing red heart, mischievous pickpocket mood",
-      "price": 50
-    },
-    {
-      "id": "bounce",
-      "name": "Отскок",
-      "type": "attack",
-      "cost": 3,
-      "text": "Наносит 5 урона 2 раза.",
-      "art": "a spinning red maple-leaf throwing star ricocheting, with two curved motion arcs",
-      "price": 45
-    },
-    {
-      "id": "accuracy",
-      "name": "Точность",
-      "type": "skill",
-      "cost": 4,
-      "text": "Даёт 8 меткости.",
-      "art": "an ornate brass targeting monocle with a glinting focused eye behind it",
-      "price": 40
-    },
-    {
-      "id": "strength_potion",
-      "name": "Зелье силы",
-      "type": "item",
-      "cost": 0,
-      "text": "Увеличивает урон на 25% до конца боя.",
-      "art": "a round glass potion bottle with a cork, filled with glowing red liquid, a little star on the label",
-      "price": 60
     }
   ]
 }
