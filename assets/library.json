@@ -1,10 +1,15 @@
 {
-  "_comment": "Библиотека ассетов игры. Ключ — имя файла, name_ru — как называет автор, type — вид ассета.",
+  "_comment": "Библиотека ассетов игры. Разложены по папкам: backgrounds/ characters/ icons/ cards/. Ключ — путь к файлу, name_ru — как называет автор.",
   "assets": {
-    "secret_merchant.png": {
+    "backgrounds/secret_merchant.png": {
       "name_ru": "Тайная торговка",
       "type": "background",
       "note": "Фон экрана: гадалка с хрустальным шаром за столом. Поверх накладывается интерфейс."
+    },
+    "backgrounds/balu_trading_shop.png": {
+      "name_ru": "Торговая лавка Балу",
+      "type": "background",
+      "note": "Фон магазина: прилавок в цирковом шатре с гирляндами. Поверх ложатся карты/цены."
     }
   }
 }
