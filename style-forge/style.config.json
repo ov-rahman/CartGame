@@ -1,0 +1,48 @@
+{
+  "project": "Циркач — карточный роглайк",
+  "_comment": "Единый источник правды по стилю. Меняешь тут — меняется вся игра.",
+
+  "style_bible": {
+    "prompt_suffix": "1930s rubber-hose cartoon style, vintage hand-inked illustration in the spirit of Cuphead, thick confident black ink outlines, cross-hatched pen shading, warm aged-paper sepia color palette, subtle watercolor grain, expressive pie-cut cartoon eyes, whimsical dark-carnival mood, painted look on old parchment",
+    "negative": "no 3d render, no photorealism, no modern anime, no smooth digital gradients, no neon colors, no glossy plastic, no lens flare, no text, no lettering, no watermark, no card frame, no border, no UI elements, no drop-shadow box",
+    "framing": "Draw ONLY the single subject, centered, full body, facing the viewer, on a FULLY TRANSPARENT background (export PNG with alpha). Leave a generous empty margin around the subject. Do NOT add any frame, card, text, ground shadow, or background scenery.",
+    "palette": ["#EAD9AE", "#D8C089", "#B8965A", "#7A5230", "#4A3524", "#2B2018", "#B23A2E", "#C4552F", "#D9A741", "#3E5C6E", "#5E7C6E", "#6E4A7A", "#EDE6D3"]
+  },
+
+  "grade": {
+    "_comment": "Пост-обработка субъекта: приводит любую картинку к общей тональности.",
+    "saturation": 0.86,
+    "warm": [1.06, 1.005, 0.9],
+    "contrast": 1.06,
+    "sepia_shadow": "#3A2A1C",
+    "paper_highlight": "#EDE0BE",
+    "tone_amount": 0.12,
+    "grain": 7
+  },
+
+  "card": {
+    "width": 640,
+    "height": 900,
+    "paper_base": "#E7D6AC",
+    "paper_dark": "#D4BE8C",
+    "ink": "#2B2018",
+    "ink_soft": "#5A4632"
+  },
+
+  "types": {
+    "attack": { "label": "АТАКА",   "banner": "#B23A2E", "banner_ink": "#F3E6C8" },
+    "skill":  { "label": "НАВЫК",   "banner": "#3E5C6E", "banner_ink": "#F3E6C8" },
+    "power":  { "label": "СИЛА",    "banner": "#6E4A7A", "banner_ink": "#F3E6C8" },
+    "item":   { "label": "ПРЕДМЕТ", "banner": "#5E7C6E", "banner_ink": "#F3E6C8" }
+  },
+
+  "energy_colors": { "default": "#6E4A7A", "0": "#5E7C6E" },
+  "coin_color": "#D9A741",
+
+  "fonts": {
+    "title": "assets/fonts/Lora-Bold.ttf",
+    "body": "assets/fonts/Lora-Regular.ttf",
+    "body_italic": "assets/fonts/Lora-Italic.ttf",
+    "number": "assets/fonts/Lora-Bold.ttf"
+  }
+}

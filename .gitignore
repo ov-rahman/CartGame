@@ -1,0 +1,4 @@
+style-forge/inbox/*.png
+!style-forge/inbox/.gitkeep
+__pycache__/
+*.pyc
