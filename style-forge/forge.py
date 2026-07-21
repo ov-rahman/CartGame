@@ -40,12 +40,41 @@ def font(cfg, role, size):
     return ImageFont.truetype(os.path.join(HERE, cfg["fonts"][role]), size)
 
 
+# ── совместимость со старым Pillow (например, встроенным в Pythonista на iOS) ──
+
+def text_len(f, s):
+    """Ширина строки. getlength есть только с Pillow 8; иначе getsize."""
+    return f.getlength(s) if hasattr(f, "getlength") else f.getsize(s)[0]
+
+
+def glyph_box(f, s, sw=0):
+    """bbox краски глифа. Со старым Pillow — прямоугольник из getsize."""
+    if hasattr(f, "getbbox"):
+        try:
+            return f.getbbox(s, stroke_width=sw)
+        except TypeError:
+            return f.getbbox(s)
+    w, h = f.getsize(s)
+    return (0, 0, w, h)
+
+
+def draw_text(d, xy, s, f, fill, sw=0):
+    """Рисует текст; если Pillow не умеет stroke_width — имитирует жир смещениями."""
+    try:
+        d.text(xy, s, font=f, fill=fill, stroke_width=sw, stroke_fill=fill)
+    except TypeError:
+        x, y = xy
+        for dx in range(-sw, sw + 1):
+            for dy in range(-sw, sw + 1):
+                d.text((x + dx, y + dy), s, font=f, fill=fill)
+
+
 def fit_font(cfg, role, text, max_w, start, min_size=14):
     """Подбирает размер шрифта, чтобы текст влез в max_w."""
     size = start
     while size > min_size:
         f = font(cfg, role, size)
-        if f.getlength(text) <= max_w:
+        if text_len(f, text) <= max_w:
             return f
         size -= 2
     return font(cfg, role, min_size)
@@ -55,7 +84,7 @@ def wrap(draw, text, f, max_w):
     lines, cur = [], ""
     for word in text.split():
         trial = (cur + " " + word).strip()
-        if draw.textlength(trial, font=f) <= max_w:
+        if text_len(f, trial) <= max_w:
             cur = trial
         else:
             if cur:
@@ -130,7 +159,7 @@ def fit_tfont(cfg, text, max_w, start):
     size = int(start)
     while size > 12:
         f = tfont(cfg, size)
-        if f.getlength(text) <= max_w:
+        if text_len(f, text) <= max_w:
             return f
         size -= 2
     return tfont(cfg, 12)
@@ -138,14 +167,14 @@ def fit_tfont(cfg, text, max_w, start):
 
 def ctext(d, cx, y, s, f, fill, sw=0):
     """Текст по центру относительно cx, с утолщением через обводку (sw)."""
-    d.text((cx - d.textlength(s, font=f) / 2, y), s, font=f, fill=fill, stroke_width=sw, stroke_fill=fill)
+    draw_text(d, (cx - text_len(f, s) / 2, y), s, f, fill, sw)
 
 
 def glyph_centered(d, cx, cy, s, f, fill, sw=0):
     """Ставит текст так, чтобы РЕАЛЬНАЯ краска глифа попала в точку (cx, cy).
     Нужно для цифры в квадрате: метрики Pangolin врут, центруем по bbox."""
-    x0, y0, x1, y1 = f.getbbox(s, stroke_width=sw)
-    d.text((cx - (x0 + x1) / 2, cy - (y0 + y1) / 2), s, font=f, fill=fill, stroke_width=sw, stroke_fill=fill)
+    x0, y0, x1, y1 = glyph_box(f, s, sw)
+    draw_text(d, (cx - (x0 + x1) / 2, cy - (y0 + y1) / 2), s, f, fill, sw)
 
 
 def autocrop_alpha(img, pad=2):
@@ -243,7 +272,7 @@ def draw_price_plate(base, cx, top, price, cfg):
     f = tfont(cfg, 48)
     s = str(price)
     asc, desc = f.getmetrics()
-    d.text((coin_x + cr + 18, cy - (asc + desc) / 2), s, font=f, fill=(240, 224, 190), stroke_width=1, stroke_fill=(240, 224, 190))
+    draw_text(d, (coin_x + cr + 18, cy - (asc + desc) / 2), s, f, (240, 224, 190), 1)
 
 
 # ────────────────────────────────────────────────────────── плейсхолдер
