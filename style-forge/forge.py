@@ -141,6 +141,13 @@ def ctext(d, cx, y, s, f, fill, sw=0):
     d.text((cx - d.textlength(s, font=f) / 2, y), s, font=f, fill=fill, stroke_width=sw, stroke_fill=fill)
 
 
+def glyph_centered(d, cx, cy, s, f, fill, sw=0):
+    """Ставит текст так, чтобы РЕАЛЬНАЯ краска глифа попала в точку (cx, cy).
+    Нужно для цифры в квадрате: метрики Pangolin врут, центруем по bbox."""
+    x0, y0, x1, y1 = f.getbbox(s, stroke_width=sw)
+    d.text((cx - (x0 + x1) / 2, cy - (y0 + y1) / 2), s, font=f, fill=fill, stroke_width=sw, stroke_fill=fill)
+
+
 def autocrop_alpha(img, pad=2):
     a = np.asarray(img.convert("RGBA"))[..., 3]
     ys, xs = np.where(a > 12)
@@ -317,12 +324,11 @@ def template_card(card, subject, cfg):
     subj = fit_contain(subj, (ax1 - ax0, ay1 - ay0))
     img.alpha_composite(subj, (cx - subj.width // 2, ay0 + (ay1 - ay0 - subj.height) // 2))
 
-    # стоимость в бейдж (у предметов энергии нет)
+    # стоимость в бейдж (у предметов энергии нет) — точно по центру квадрата
     if card["type"] != "item":
         bf = tfont(cfg, W * t["badge_size"])
-        ba, bd = bf.getmetrics()
-        ctext(d, int(W * t["badge_center"][0]), int(H * t["badge_center"][1]) - (ba + bd) / 2,
-              str(card["cost"]), bf, cream, sw["badge"])
+        glyph_centered(d, W * t["badge_center"][0], H * t["badge_center"][1],
+                       str(card["cost"]), bf, cream, sw["badge"])
 
     # название (над штатной линией)
     tf = fit_tfont(cfg, card["name"], W * 0.8, W * t["name_size"])
