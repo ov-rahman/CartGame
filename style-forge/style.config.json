@@ -39,6 +39,29 @@
   "energy_colors": { "default": "#6E4A7A", "0": "#5E7C6E" },
   "coin_color": "#D9A741",
 
+  "wear": {
+    "_comment": "Потрёпанность. Каждая карта портится по своему сид'у (id) — поэтому все чуть разные, но воспроизводимые.",
+    "corner_radius": 30,
+    "fray": 0.55,
+    "spots": 30,
+    "spot_color": "#6B4A2A",
+    "stains": 2,
+    "stain_color": "#5A3A20",
+    "scratches": 8,
+    "edge_darken": 0.24,
+    "tone_jitter": 7,
+    "max_rotation": 1.4
+  },
+
+  "shop": {
+    "wood_top": "#5C3F26",
+    "wood_bottom": "#2C1D11",
+    "plate_color": "#20160E",
+    "glow": "#C9903E",
+    "card_width": 360,
+    "tilts": [-3, 2, -2, 3]
+  },
+
   "fonts": {
     "title": "assets/fonts/Lora-Bold.ttf",
     "body": "assets/fonts/Lora-Regular.ttf",
