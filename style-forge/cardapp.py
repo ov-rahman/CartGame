@@ -32,41 +32,15 @@ except ImportError:
 
 cfg = forge.load_json("style.config.json")
 CATALOG = os.path.join(HERE, "catalog.json")
-THEME_FILE = os.path.join(HERE, "theme.json")
 
 TYPES = ["attack", "skill", "power", "item"]
 TYPE_LABELS = ["Атака", "Навык", "Сила", "Предмет"]
 
-PALETTES = {
-    "dark": {
-        "bg": "#111114", "panel": "#1b1b1f", "text": "#ece5d6", "sub": "#9a9285",
-        "accent": "#d9a741", "field_bg": "#26262b", "field_text": "#f2ead9", "border": "#33333a",
-    },
-    "light": {
-        "bg": "#efe7d6", "panel": "#fbf6ea", "text": "#2e2218", "sub": "#8a745a",
-        "accent": "#b06d2e", "field_bg": "#ffffff", "field_text": "#2e2218", "border": "#d8c8a8",
-    },
+# только светлая тема
+TH = {
+    "bg": "#efe7d6", "panel": "#fbf6ea", "text": "#2e2218", "sub": "#8a745a",
+    "accent": "#b06d2e", "field_bg": "#ffffff", "field_text": "#2e2218", "border": "#d8c8a8",
 }
-
-
-def load_theme_name():
-    try:
-        with open(THEME_FILE, encoding="utf-8") as f:
-            return json.load(f).get("theme", "dark")
-    except Exception:
-        return "dark"
-
-
-def save_theme_name(name):
-    try:
-        with open(THEME_FILE, "w", encoding="utf-8") as f:
-            json.dump({"theme": name}, f)
-    except Exception:
-        pass
-
-
-THEME_NAME = load_theme_name()
-TH = PALETTES[THEME_NAME]
 
 
 # ─────────────────────────────────────────── данные
@@ -198,6 +172,17 @@ class EditorView(ui.View):
             self.scroll.add_subview(lb)
             self.labels.append(lb)
 
+        self.preview_btn = ui.Button()
+        self.preview_btn.title = "👁  Посмотреть карту"
+        self.preview_btn.font = ("HelveticaNeue-Bold", 18)
+        self.preview_btn.background_color = TH["field_bg"]
+        self.preview_btn.tint_color = TH["text"]
+        self.preview_btn.border_width = 1
+        self.preview_btn.border_color = TH["border"]
+        self.preview_btn.corner_radius = 14
+        self.preview_btn.action = self.preview
+        self.scroll.add_subview(self.preview_btn)
+
         self.save_btn = ui.Button()
         self.save_btn.title = "Сохранить карту"
         self.save_btn.font = ("HelveticaNeue-Bold", 19)
@@ -239,9 +224,36 @@ class EditorView(ui.View):
             y += 20
             field.frame = (m, y, w, h)
             y += h + 16
-        self.save_btn.frame = (m, y + 6, w, 56)
-        y += 78
+        self.preview_btn.frame = (m, y + 6, w, 52)
+        y += 66
+        self.save_btn.frame = (m, y, w, 56)
+        y += 76
         self.scroll.content_size = (self.width, y)
+
+    def current_card(self):
+        c = dict(self.card)
+        c["name"] = self.name_field.text.strip() or "Без названия"
+        c["text"] = self.desc_view.text.strip()
+        c["cost"] = self.cost
+        c["type"] = TYPES[self.type_seg.selected_index]
+        if not c.get("art"):
+            c["art"] = c["name"]
+        return c
+
+    def preview(self, sender):
+        c = self.current_card()
+        console.show_activity("Собираю…")
+        try:
+            img, _ = forge.render_card(c, cfg)
+            os.makedirs(os.path.join(HERE, "output"), exist_ok=True)
+            path = os.path.join(HERE, "output", c["id"] + "__preview.png")
+            img.save(path)
+        except Exception as e:
+            console.hide_activity()
+            console.hud_alert("Ошибка: %s" % e, "error", 2.5)
+            return
+        console.hide_activity()
+        console.quicklook(path)
 
     def choose_cost(self, sender):
         v = dialogs.list_dialog("Стоимость", [str(i) for i in range(0, 11)])
@@ -300,7 +312,6 @@ class ListView(ui.View):
         self.add_subview(self.tv)
         self.right_button_items = [
             ui.ButtonItem(title="＋", action=self.new_card),
-            ui.ButtonItem(title="Тема", action=self.toggle_theme),
         ]
         self.left_button_items = [ui.ButtonItem(title="Закрыть", action=lambda s: self.nav.close())]
         self.apply_theme()
@@ -316,13 +327,6 @@ class ListView(ui.View):
             self.nav.background_color = TH["bg"]
             self.nav.tint_color = TH["accent"]
         self.tv.reload()
-
-    def toggle_theme(self, sender):
-        global THEME_NAME, TH
-        THEME_NAME = "light" if THEME_NAME == "dark" else "dark"
-        TH = PALETTES[THEME_NAME]
-        save_theme_name(THEME_NAME)
-        self.apply_theme()
 
     def new_card(self, sender):
         card = {"id": new_id(), "name": "", "type": "attack", "cost": 1, "text": "", "art": ""}
