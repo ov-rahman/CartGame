@@ -54,12 +54,8 @@
   },
 
   "shop": {
-    "wood_top": "#5C3F26",
-    "wood_bottom": "#2C1D11",
-    "plate_color": "#20160E",
-    "glow": "#C9903E",
-    "card_width": 360,
-    "tilts": [-3, 2, -2, 3]
+    "_comment": "Магазинный вариант карты = обычная карта + этот ценник снизу.",
+    "plate_color": "#20160E"
   },
 
   "fonts": {

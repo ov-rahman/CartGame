@@ -189,39 +189,25 @@ def distress(img, cfg):
     return Image.fromarray(np.clip(arr, 0, 255).astype("uint8"), "RGBA")
 
 
-# ────────────────────────────────────────────────────────── дерево (магазин)
-
-def make_wood(w, h, cfg):
-    s = cfg["shop"]
-    top, bot = np.array(hex2rgb(s["wood_top"]), np.float32), np.array(hex2rgb(s["wood_bottom"]), np.float32)
-    yy = np.linspace(0, 1, h)[:, None, None]
-    img = np.repeat(top * (1 - yy) + bot * yy, w, axis=1)
-    img += np.random.normal(0, 6, (h, w, 1))                       # зерно
-    img += np.random.normal(0, 1, (1, w, 1)) * 5                   # вертикальные волокна
-    for py in range(70, h, 96):                                    # стыки досок
-        img[py:py + 2, :, :] *= 0.55
-    xx = np.linspace(-1, 1, w)[None, :, None]
-    yv = np.linspace(-1, 1, h)[:, None, None]
-    glow = np.clip(1 - np.sqrt(xx ** 2 + (yv + 0.5) ** 2), 0, 1)[..., None]
-    img += glow[..., 0] * np.array(hex2rgb(s["glow"]), np.float32) * 0.28
-    return Image.fromarray(np.clip(img, 0, 255).astype("uint8"), "RGB").convert("RGBA")
-
+# ────────────────────────────────────────────────────────── ценник (магазин)
 
 def draw_price_plate(base, cx, top, price, cfg):
+    """Тёмный ценник с монетой под картой — как на скрине магазина."""
     d = ImageDraw.Draw(base, "RGBA")
-    pw, ph = 152, 62
+    pw, ph = 236, 88
     x0, y0 = cx - pw // 2, top
-    d.rounded_rectangle([x0, y0, x0 + pw, y0 + ph], radius=14,
-                        fill=hex2rgb(cfg["shop"]["plate_color"]) + (240,), outline=(18, 12, 7), width=3)
+    edge = (18, 12, 7)
+    d.rounded_rectangle([x0, y0, x0 + pw, y0 + ph], radius=18,
+                        fill=hex2rgb(cfg["shop"]["plate_color"]) + (245,), outline=edge, width=4)
     cy = y0 + ph // 2
-    cr = 19
-    coin_x = x0 + 34
-    d.ellipse([coin_x - cr, cy - cr, coin_x + cr, cy + cr], fill=hex2rgb(cfg["coin_color"]), outline=(18, 12, 7), width=3)
-    d.ellipse([coin_x - cr + 6, cy - cr + 6, coin_x + cr - 6, cy + cr - 6], outline=(18, 12, 7), width=2)
-    f = font(cfg, "number", 34)
+    cr = 27
+    coin_x = x0 + 52
+    d.ellipse([coin_x - cr, cy - cr, coin_x + cr, cy + cr], fill=hex2rgb(cfg["coin_color"]), outline=edge, width=4)
+    d.ellipse([coin_x - cr + 8, cy - cr + 8, coin_x + cr - 8, cy + cr - 8], outline=edge, width=2)
+    f = font(cfg, "number", 48)
     s = str(price)
     asc, desc = f.getmetrics()
-    d.text((coin_x + cr + 12, cy - (asc + desc) / 2), s, font=f, fill=(240, 224, 190))
+    d.text((coin_x + cr + 18, cy - (asc + desc) / 2), s, font=f, fill=(240, 224, 190))
 
 
 # ────────────────────────────────────────────────────────── плейсхолдер
@@ -264,29 +250,19 @@ def placeholder_subject(card, cfg, size=760):
 
 # ────────────────────────────────────────────────────────── бэйджи
 
-def draw_gem(base, x, y, r, number, color, cfg):
-    d = ImageDraw.Draw(base)
+def draw_badge(base, x, y, size, number, color, cfg):
+    """Квадратный бейдж стоимости в углу карты — как на референс-скринах."""
+    d = ImageDraw.Draw(base, "RGBA")
     ink = hex2rgb(cfg["card"]["ink"])
-    d.ellipse([x - r, y - r, x + r, y + r], fill=hex2rgb(color), outline=ink, width=6)
-    d.arc([x - r + 8, y - r + 8, x + r - 8, y + r - 8], 200, 340, fill=(255, 255, 255, 90), width=4)
-    f = font(cfg, "number", int(r * 1.25))
+    col = tuple(int(c * 0.82) for c in color)
+    d.rounded_rectangle([x, y, x + size, y + size], radius=16, fill=col, outline=ink, width=5)
+    d.rounded_rectangle([x + 7, y + 7, x + size - 7, y + size - 7], radius=10,
+                        outline=(255, 255, 255, 55), width=2)
+    f = font(cfg, "number", int(size * 0.62))
     s = str(number)
-    w = d.textlength(s, font=f)
+    tw = f.getlength(s)
     asc, desc = f.getmetrics()
-    d.text((x - w / 2, y - (asc + desc) / 2), s, font=f, fill=(255, 255, 255))
-
-
-def draw_coin(base, x, y, r, number, cfg):
-    d = ImageDraw.Draw(base)
-    ink = hex2rgb(cfg["card"]["ink"])
-    col = hex2rgb(cfg["coin_color"])
-    d.ellipse([x - r, y - r, x + r, y + r], fill=col, outline=ink, width=5)
-    d.ellipse([x - r + 7, y - r + 7, x + r - 7, y + r - 7], outline=ink, width=2)
-    f = font(cfg, "number", int(r * 1.05))
-    s = str(number)
-    w = d.textlength(s, font=f)
-    asc, desc = f.getmetrics()
-    d.text((x - w / 2, y - (asc + desc) / 2), s, font=f, fill=hex2rgb(cfg["card"]["ink"]))
+    d.text((x + size / 2 - tw / 2, y + size / 2 - (asc + desc) / 2), s, font=f, fill=(244, 230, 200))
 
 
 # ────────────────────────────────────────────────────────── карта
@@ -306,46 +282,42 @@ def make_card(card, subject, cfg):
     d.rounded_rectangle([m, m, W - m, H - m], radius=34, outline=ink, width=6)
     d.rounded_rectangle([m + 11, m + 11, W - m - 11, H - m - 11], radius=26, outline=ink_soft, width=2)
 
-    # окно арта
-    ax0, ay0, ax1, ay1 = 46, 92, W - 46, 512
-    inset = make_paper(ax1 - ax0, ay1 - ay0, cfg)
-    inset = Image.eval(inset, lambda p: int(p * 0.93))  # чуть темнее
-    img.paste(inset, (ax0, ay0), inset)
+    # арт "плавает" на бумаге (без рамки-окна), с едва заметной тёплой подложкой
+    ax0, ay0, ax1, ay1 = 60, 118, W - 60, 500
+    acx, acy = (ax0 + ax1) // 2, (ay0 + ay1) // 2
+    glow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    ImageDraw.Draw(glow).ellipse([ax0 + 20, ay0 + 30, ax1 - 20, ay1],
+                                 fill=hex2rgb(cfg["card"]["paper_dark"]) + (75,))
+    img = Image.alpha_composite(img, glow.filter(ImageFilter.GaussianBlur(20)))
 
     subj = apply_grade(subject, cfg)
-    subj = fit_contain(subj, (ax1 - ax0 - 28, ay1 - ay0 - 28))
-    img.paste(subj, (ax0 + (ax1 - ax0 - subj.width) // 2,
-                     ay0 + (ay1 - ay0 - subj.height) // 2), subj)
-    d.rounded_rectangle([ax0, ay0, ax1, ay1], radius=16, outline=ink, width=4)
+    subj = fit_contain(subj, (ax1 - ax0, ay1 - ay0))
+    img.paste(subj, (acx - subj.width // 2, acy - subj.height // 2), subj)
+    d = ImageDraw.Draw(img)
 
-    # баннер с названием
-    by0, by1 = 528, 590
-    banner = hex2rgb(tstyle["banner"])
-    d.rounded_rectangle([40, by0, W - 40, by1], radius=14, fill=banner, outline=ink, width=4)
-    tf = fit_font(cfg, "title", card["name"], W - 130, 42)
+    # название — без баннера, крупный текст + орнаментная линейка (как на скринах)
+    name_y = 552
+    tf = fit_font(cfg, "title", card["name"], W - 150, 50)
     tw = tf.getlength(card["name"])
     asc, desc = tf.getmetrics()
-    d.text(((W - tw) / 2, (by0 + by1) / 2 - (asc + desc) / 2 + 2),
-           card["name"], font=tf, fill=hex2rgb(tstyle["banner_ink"]))
-
-    # тип (мелкие капсы с разрядкой)
-    lf = font(cfg, "body", 22)
-    label = " ".join(tstyle["label"])
-    lw = lf.getlength(label)
-    d.text(((W - lw) / 2, by1 + 12), label, font=lf, fill=ink_soft)
+    d.text(((W - tw) / 2, name_y - (asc + desc) / 2), card["name"], font=tf, fill=ink)
+    ry = name_y + 40
+    d.line([130, ry, W - 130, ry], fill=ink_soft, width=2)
+    for dx in (130, W - 130):
+        d.polygon([(dx, ry - 6), (dx + 6, ry), (dx, ry + 6), (dx - 6, ry)], fill=ink_soft)
 
     # описание
     bf = font(cfg, "body", 30)
-    lines = wrap(d, card["text"], bf, W - 130)
-    ty = 664
+    lines = wrap(d, card["text"], bf, W - 140)
+    ty = ry + 26
     for line in lines:
         lw = d.textlength(line, font=bf)
         d.text(((W - lw) / 2, ty), line, font=bf, fill=ink)
         ty += 40
 
-    # энергия (самоцвет слева сверху)
-    ecol = cfg["energy_colors"].get(str(card["cost"]), cfg["energy_colors"]["default"])
-    draw_gem(img, m + 30, m + 30, 42, card["cost"], ecol, cfg)
+    # стоимость — квадратный бейдж в углу (у предметов энергии нет)
+    if card["type"] != "item":
+        draw_badge(img, m + 4, m + 4, 82, card["cost"], hex2rgb(tstyle["banner"]), cfg)
 
     # лёгкий сдвиг тона на карту — чтобы бумага не была одинаковой у всех
     jit = cfg["wear"]["tone_jitter"]
@@ -408,34 +380,23 @@ def cmd_build(cfg, cat, args):
 
 
 def cmd_shop(cfg, cat, args):
-    """Витрина магазина: карты с ценой стоят на деревянной полке с ценниками."""
-    os.makedirs(os.path.join(HERE, "output"), exist_ok=True)
+    """Магазинный вариант карты: обычная карта + ценник снизу, отдельной картинкой."""
+    outdir = os.path.join(HERE, "output", "shop")
+    os.makedirs(outdir, exist_ok=True)
     priced = [c for c in cat["cards"] if "price" in c]
     if not priced:
         print("В catalog.json нет карт с полем 'price'.")
         return
-    CW = cfg["shop"]["card_width"]
-    scale = CW / cfg["card"]["width"]
-    CH = int(cfg["card"]["height"] * scale)
-    pad = 46
-    W = pad + len(priced) * (CW + pad)
-    H = CH + 250
-    canvas = make_wood(W, H, cfg)
-    tilts = cfg["shop"]["tilts"]
-    for i, card in enumerate(priced):
-        img, _ = render_card(card, cfg)
-        img = img.resize((CW, CH), Image.LANCZOS).rotate(tilts[i % len(tilts)], expand=True, resample=Image.BICUBIC)
-        cx = pad + i * (CW + pad) + CW // 2
-        x, y = cx - img.width // 2, 40
-        # мягкая тень под картой
-        shadow = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
-        ImageDraw.Draw(shadow).ellipse([cx - CW // 2, y + CH - 30, cx + CW // 2, y + CH + 40], fill=(0, 0, 0, 90))
-        canvas = Image.alpha_composite(canvas, shadow.filter(ImageFilter.GaussianBlur(12)))
-        canvas.paste(img, (x, y), img)
-        draw_price_plate(canvas, cx, y + img.height - 6, card["price"], cfg)
-        print(f"  ✓ {card['name']:<14} — {card['price']}◎")
-    canvas.convert("RGB").save(os.path.join(HERE, "output", "shop.png"))
-    print("Витрина → output/shop.png")
+    gap, plate_h = 20, 88
+    for card in priced:
+        card_img, tag = render_card(card, cfg)
+        W, H = card_img.size
+        canvas = Image.new("RGBA", (W, H + gap + plate_h + 6), (0, 0, 0, 0))
+        canvas.paste(card_img, (0, 0), card_img)
+        draw_price_plate(canvas, W // 2, H + gap, card["price"], cfg)
+        canvas.save(os.path.join(outdir, f"{card['id']}.png"))
+        print(f"  ✓ {card['name']:<14} [{tag}] + ценник {card['price']}◎ → output/shop/{card['id']}.png")
+    print("Готово.")
 
 
 def main():
