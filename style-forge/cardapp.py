@@ -23,12 +23,33 @@ if HERE not in sys.path:
 import ui
 import console
 import dialogs
+import numpy as np
+from PIL import Image, ImageDraw, ImageFilter
 import forge
 
 try:
     import photos
 except ImportError:
     photos = None
+
+
+def remove_bg(img):
+    """Убирает однотонный фон (белый/серый/любой у краёв) заливкой от углов."""
+    rgb = img.convert("RGB")
+    w, h = rgb.size
+    key = (255, 0, 255)
+    seeds = [(0, 0), (w - 1, 0), (0, h - 1), (w - 1, h - 1),
+             (w // 2, 0), (w // 2, h - 1), (0, h // 2), (w - 1, h // 2)]
+    for sp in seeds:
+        ImageDraw.floodfill(rgb, sp, key, thresh=52)
+    bg = np.all(np.asarray(rgb) == np.array(key), axis=-1)
+    if bg.mean() < 0.02:                       # фон не однотонный — не трогаем
+        return img.convert("RGBA")
+    alpha = Image.fromarray(np.where(bg, 0, 255).astype("uint8"))
+    alpha = alpha.filter(ImageFilter.MinFilter(3)).filter(ImageFilter.GaussianBlur(0.8))
+    out = img.convert("RGBA")
+    out.putalpha(alpha)
+    return out
 
 cfg = forge.load_json("style.config.json")
 CATALOG = os.path.join(HERE, "catalog.json")
@@ -319,6 +340,14 @@ class EditorView(ui.View):
         img = pick_image()
         if img is None:
             return
+        # если фон непрозрачный — убираем его автоматически
+        if img.mode != "RGBA" or img.convert("RGBA").getextrema()[3][0] == 255:
+            console.show_activity("Убираю фон…")
+            try:
+                img = remove_bg(img)
+            except Exception:
+                img = img.convert("RGBA")
+            console.hide_activity()
         os.makedirs(os.path.join(HERE, "inbox"), exist_ok=True)
         dest = os.path.join(HERE, "inbox", self.card["id"] + ".png")
         try:
@@ -329,9 +358,9 @@ class EditorView(ui.View):
         self.icon_btn.background_image = ui_image(dest)
         self.icon_btn.title = ""
         if img.convert("RGBA").getextrema()[3][0] == 255:
-            console.hud_alert("Иконка БЕЗ прозрачного фона!", "error", 2.5)
+            console.hud_alert("Фон не убрался — иконка непрозрачная", "error", 2.5)
         else:
-            console.hud_alert("Иконка добавлена", "success", 1.2)
+            console.hud_alert("Иконка добавлена, фон убран", "success", 1.3)
 
     def delete(self, sender):
         icon = os.path.join(HERE, "inbox", self.card["id"] + ".png")
