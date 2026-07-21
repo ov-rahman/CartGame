@@ -192,6 +192,19 @@ class EditorView(ui.View):
         self.save_btn.action = self.save
         self.scroll.add_subview(self.save_btn)
 
+        self.delete_btn = None
+        if not is_new:
+            self.delete_btn = ui.Button()
+            self.delete_btn.title = "🗑  Удалить карту"
+            self.delete_btn.font = ("HelveticaNeue-Bold", 17)
+            self.delete_btn.tint_color = "#c0392b"
+            self.delete_btn.background_color = TH["field_bg"]
+            self.delete_btn.border_width = 1
+            self.delete_btn.border_color = "#c0392b"
+            self.delete_btn.corner_radius = 14
+            self.delete_btn.action = self.delete
+            self.scroll.add_subview(self.delete_btn)
+
     def _field(self, value, placeholder):
         f = ui.TextField()
         f.text = value
@@ -228,6 +241,9 @@ class EditorView(ui.View):
         y += 66
         self.save_btn.frame = (m, y, w, 56)
         y += 76
+        if self.delete_btn:
+            self.delete_btn.frame = (m, y, w, 50)
+            y += 64
         self.scroll.content_size = (self.width, y)
 
     def current_card(self):
@@ -278,6 +294,29 @@ class EditorView(ui.View):
             console.hud_alert("Иконка БЕЗ прозрачного фона!", "error", 2.5)
         else:
             console.hud_alert("Иконка добавлена", "success", 1.2)
+
+    def delete(self, sender):
+        icon = os.path.join(HERE, "inbox", self.card["id"] + ".png")
+        extra = "  (с иконкой)" if os.path.exists(icon) else ""
+        try:
+            console.alert("Удалить карту?", (self.card.get("name") or "Без названия") + extra, "Удалить")
+        except KeyboardInterrupt:
+            return
+        ids = [c["id"] for c in DATA["cards"]]
+        if self.card["id"] in ids:
+            del DATA["cards"][ids.index(self.card["id"])]
+            save_data(DATA)
+        for p in (os.path.join(HERE, "output", self.card["id"] + ".png"),
+                  os.path.join(HERE, "output", "shop", self.card["id"] + ".png"),
+                  os.path.join(HERE, "output", self.card["id"] + "__preview.png"),
+                  icon):
+            try:
+                os.remove(p)
+            except OSError:
+                pass
+        console.hud_alert("Удалено", "success", 1.0)
+        self.on_saved()
+        self.nav.pop_view()
 
     def save(self, sender):
         self.card["name"] = self.name_field.text.strip() or "Без названия"
