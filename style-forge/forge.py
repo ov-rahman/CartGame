@@ -122,6 +122,35 @@ def fit_contain(img, box):
     return img.resize((max(1, int(iw * s)), max(1, int(ih * s))), Image.LANCZOS)
 
 
+def tfont(cfg, px):
+    return ImageFont.truetype(os.path.join(HERE, cfg["font_main"]), int(px))
+
+
+def fit_tfont(cfg, text, max_w, start):
+    size = int(start)
+    while size > 12:
+        f = tfont(cfg, size)
+        if f.getlength(text) <= max_w:
+            return f
+        size -= 2
+    return tfont(cfg, 12)
+
+
+def ctext(d, cx, y, s, f, fill, sw=0):
+    """Текст по центру относительно cx, с утолщением через обводку (sw)."""
+    d.text((cx - d.textlength(s, font=f) / 2, y), s, font=f, fill=fill, stroke_width=sw, stroke_fill=fill)
+
+
+def autocrop_alpha(img, pad=2):
+    a = np.asarray(img.convert("RGBA"))[..., 3]
+    ys, xs = np.where(a > 12)
+    return img.crop((max(0, xs.min() - pad), max(0, ys.min() - pad), xs.max() + pad, ys.max() + pad))
+
+
+def fit_width(img, w):
+    return img.resize((int(w), int(img.height * w / img.width)), Image.LANCZOS)
+
+
 # ────────────────────────────────────────────────────────── износ
 
 def card_seed(card):
@@ -204,10 +233,10 @@ def draw_price_plate(base, cx, top, price, cfg):
     coin_x = x0 + 52
     d.ellipse([coin_x - cr, cy - cr, coin_x + cr, cy + cr], fill=hex2rgb(cfg["coin_color"]), outline=edge, width=4)
     d.ellipse([coin_x - cr + 8, cy - cr + 8, coin_x + cr - 8, cy + cr - 8], outline=edge, width=2)
-    f = font(cfg, "number", 48)
+    f = tfont(cfg, 48)
     s = str(price)
     asc, desc = f.getmetrics()
-    d.text((coin_x + cr + 18, cy - (asc + desc) / 2), s, font=f, fill=(240, 224, 190))
+    d.text((coin_x + cr + 18, cy - (asc + desc) / 2), s, font=f, fill=(240, 224, 190), stroke_width=1, stroke_fill=(240, 224, 190))
 
 
 # ────────────────────────────────────────────────────────── плейсхолдер
@@ -267,7 +296,51 @@ def draw_badge(base, x, y, size, number, color, cfg):
 
 # ────────────────────────────────────────────────────────── карта
 
+def template_card(card, subject, cfg):
+    """Карта на основе готового PNG-шаблона (прозрачный фон): вставляем арт,
+    вписываем стоимость/название/описание. Свою линию не рисуем —
+    ориентируемся на слабую линию, уже нарисованную на шаблоне."""
+    t = cfg["template"]
+    base = fit_width(autocrop_alpha(Image.open(os.path.join(HERE, t["image"])).convert("RGBA")), t["target_width"])
+    W, H = base.size
+    img = base.copy()
+    d = ImageDraw.Draw(img)
+    cx = int(W * t["center_x"])
+    ink, cream, sw = hex2rgb(t["ink"]), hex2rgb(t["cream"]), t["stroke"]
+
+    # арт по центру, над линией
+    a = t["art_box"]
+    ax0, ay0, ax1, ay1 = int(W * a[0]), int(H * a[1]), int(W * a[2]), int(H * a[3])
+    subj = autocrop_alpha(subject.convert("RGBA"))
+    if t.get("grade_subject"):
+        subj = apply_grade(subj, cfg)
+    subj = fit_contain(subj, (ax1 - ax0, ay1 - ay0))
+    img.alpha_composite(subj, (cx - subj.width // 2, ay0 + (ay1 - ay0 - subj.height) // 2))
+
+    # стоимость в бейдж (у предметов энергии нет)
+    if card["type"] != "item":
+        bf = tfont(cfg, W * t["badge_size"])
+        ba, bd = bf.getmetrics()
+        ctext(d, int(W * t["badge_center"][0]), int(H * t["badge_center"][1]) - (ba + bd) / 2,
+              str(card["cost"]), bf, cream, sw["badge"])
+
+    # название (над штатной линией)
+    tf = fit_tfont(cfg, card["name"], W * 0.8, W * t["name_size"])
+    ta, td = tf.getmetrics()
+    ctext(d, cx, int(H * t["name_y"]) - (ta + td) / 2, card["name"], tf, ink, sw["name"])
+
+    # описание (под штатной линией)
+    df = tfont(cfg, W * t["desc_size"])
+    ty = int(H * t["desc_y"])
+    for ln in wrap(d, card["text"], df, W * 0.74):
+        ctext(d, cx, ty, ln, df, ink, sw["desc"])
+        ty += int(W * t["line_step"])
+    return img
+
+
 def make_card(card, subject, cfg):
+    if cfg.get("template", {}).get("enabled"):
+        return template_card(card, subject, cfg)
     np.random.seed(card_seed(card))          # каждая карта портится по-своему
     W, H = cfg["card"]["width"], cfg["card"]["height"]
     ink = hex2rgb(cfg["card"]["ink"])
@@ -369,11 +442,13 @@ def cmd_build(cfg, cat, args):
     if not cards:
         print(f"Карта '{args.card}' не найдена в catalog.json")
         return
+    templated = cfg.get("template", {}).get("enabled")
     mrot = cfg["wear"]["max_rotation"]
     for card in cards:
         img, tag = render_card(card, cfg)
-        angle = np.random.default_rng(card_seed(card)).uniform(-mrot, mrot)  # чуть наклонена
-        img = img.rotate(angle, expand=True, resample=Image.BICUBIC)
+        if not templated:                                   # шаблон уже «кривой» вручную — не крутим
+            angle = np.random.default_rng(card_seed(card)).uniform(-mrot, mrot)
+            img = img.rotate(angle, expand=True, resample=Image.BICUBIC)
         img.save(os.path.join(HERE, "output", f"{card['id']}.png"))
         print(f"  ✓ {card['name']:<14} [{tag}] → output/{card['id']}.png")
     print("Готово.")

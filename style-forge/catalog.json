@@ -2,6 +2,15 @@
   "_comment": "Каталог ассетов. Один объект = одна карта. Поле art — это ТОЛЬКО описание субъекта (что нарисовать), стиль добавит инструмент.",
   "cards": [
     {
+      "id": "gold_arrow",
+      "name": "Золотая стрела",
+      "type": "attack",
+      "cost": 2,
+      "text": "Наносит 9 урона. Пронзает броню врага.",
+      "art": "a golden ornate arrow dart with a sharp glinting tip and flying sparks",
+      "price": 55
+    },
+    {
       "id": "prick",
       "name": "Укол",
       "type": "attack",

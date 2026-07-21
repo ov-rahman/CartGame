@@ -63,5 +63,27 @@
     "body": "assets/fonts/Lora-Regular.ttf",
     "body_italic": "assets/fonts/Lora-Italic.ttf",
     "number": "assets/fonts/Lora-Bold.ttf"
+  },
+
+  "font_main": "assets/fonts/Pangolin-Regular.ttf",
+
+  "template": {
+    "_comment": "Режим шаблона: карта рисуется поверх готового PNG-шаблона (прозрачный фон). Координаты — доли ширины/высоты карты. Свою линию НЕ рисуем — на шаблоне уже есть слабая линия (~0.668), название над ней, описание под ней.",
+    "enabled": true,
+    "image": "assets/templates/card_blank.png",
+    "target_width": 720,
+    "center_x": 0.501,
+    "ink": "#2E2218",
+    "cream": "#F7EACD",
+    "grade_subject": true,
+    "art_box": [0.14, 0.16, 0.88, 0.525],
+    "badge_center": [0.16, 0.14],
+    "badge_size": 0.088,
+    "name_y": 0.605,
+    "name_size": 0.086,
+    "desc_y": 0.692,
+    "desc_size": 0.048,
+    "line_step": 0.06,
+    "stroke": { "name": 2, "desc": 1, "badge": 2 }
   }
 }
