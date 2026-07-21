@@ -1,5 +1,6 @@
 style-forge/inbox/*.png
 !style-forge/inbox/.gitkeep
 !style-forge/inbox/gold_arrow.png
+!style-forge/inbox/firework.png
 __pycache__/
 *.pyc
