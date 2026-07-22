@@ -14,7 +14,7 @@
 | Файл | Название | Тип |
 |------|----------|-----|
 | `backgrounds/secret_merchant.png` | Тайная торговка | фон |
-| `icons/arrow.png` | Стрела | иконка |
+| `icons/prick.png` | Укол | иконка |
 | `icons/firework.png` | Фейерверк | иконка |
 | `icons/clock.png` | Часы | иконка |
 | `icons/shield.png` | Щит | иконка |
