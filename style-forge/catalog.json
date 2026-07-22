@@ -1,22 +1,4 @@
 {
-  "_comment": "Каталог карт. Управляется приложением cardapp.py (можно и руками). art — описание субъекта для генерации иконки.",
-  "cards": [
-    {
-      "id": "gold_arrow",
-      "name": "Золотая стрела",
-      "type": "attack",
-      "cost": 2,
-      "text": "Наносит 9 урона. Пронзает броню врага.",
-      "art": "a golden ornate arrow dart with a sharp glinting tip and flying sparks",
-      "price": 55
-    },
-    {
-      "id": "firework",
-      "name": "Фейерверк",
-      "type": "attack",
-      "cost": 3,
-      "text": "Наносит 8 урона 3 случайным врагам.",
-      "art": "a lit carnival skyrocket bursting into a big star-shaped explosion with flying sparks"
-    }
-  ]
+  "_comment": "Каталог карт. Сейчас ПУСТ намеренно — карты (цена, урон, тип) заполняются на этапе баланса. Готовые иконки лежат в ../assets/icons/.",
+  "cards": []
 }
